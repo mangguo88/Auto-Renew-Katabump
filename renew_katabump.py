@@ -98,6 +98,7 @@ class KatabumpAutoRenew:
         chrome_options.add_argument('--no-sandbox')
         chrome_options.add_argument('--disable-dev-shm-usage')
         chrome_options.add_argument('--disable-blink-features=AutomationControlled')
+        chrome_options.add_argument('--remote-debugging-port=9222')
         if PROXY_SERVER:
             chrome_options.add_argument(f'--proxy-server={PROXY_SERVER}')
         v_env = os.getenv('CHROME_VERSION', '')
