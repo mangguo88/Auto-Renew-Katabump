@@ -93,22 +93,56 @@ class KatabumpAutoRenew:
             return "UnknownUser"
 
     def setup_driver(self):
-        chrome_options = Options()
-        if HEADLESS: chrome_options.add_argument('--headless')
-        chrome_options.add_argument('--no-sandbox')
-        chrome_options.add_argument('--disable-dev-shm-usage')
-        chrome_options.add_argument('--disable-blink-features=AutomationControlled')
-        if PROXY_SERVER:
-            chrome_options.add_argument(f'--proxy-server={PROXY_SERVER}')
+        """创建驱动 - 每次尝试都新建 Options 对象"""
+        
+        def _create_options():
+            """内部函数：每次调用都返回全新的 Options"""
+            opts = Options()
+            if HEADLESS:
+                # Chrome 112+ 推荐使用 --headless=new
+                opts.add_argument('--headless=new')
+            opts.add_argument('--no-sandbox')
+            opts.add_argument('--disable-dev-shm-usage')
+            opts.add_argument('--disable-blink-features=AutomationControlled')
+            opts.add_argument('--disable-gpu')  # CI 环境建议添加
+            if PROXY_SERVER:
+                opts.add_argument(f'--proxy-server={PROXY_SERVER}')
+            return opts
+        
         v_env = os.getenv('CHROME_VERSION', '')
         v_main = int(v_env) if v_env.isdigit() else None
         logger.info(f"🛠️ 驱动初始化 - 指定大版本: {v_main or '自动探测'}")
+        
+        # 🔹 第一次尝试：带版本指定
         try:
-            self.driver = uc.Chrome(options=chrome_options, headless=HEADLESS, version_main=v_main, use_subprocess=True)
+            options = _create_options()  # ✅ 新建对象
+            self.driver = uc.Chrome(
+                options=options, 
+                version_main=v_main, 
+                use_subprocess=True
+            )
+            logger.info("✅ 驱动启动成功（指定版本）")
+            self.driver.set_window_size(1280, 720)
+            return
         except Exception as e:
-            logger.warning(f"⚠️ 强制版本启动失败，尝试降级启动: {e}")
-            self.driver = uc.Chrome(options=chrome_options, headless=HEADLESS)
-        self.driver.set_window_size(1280, 720)
+            logger.warning(f"⚠️ 指定版本启动失败，尝试降级: {e}")
+        
+        # 🔹 第二次尝试：不指定版本 + 更兼容的参数
+        try:
+            options = _create_options()  # ✅ 再次新建对象（关键！）
+            # 降级时添加更多兼容参数
+            options.add_argument('--disable-software-rasterizer')
+            options.add_argument('--disable-features=VizDisplayCompositor')
+            
+            self.driver = uc.Chrome(
+                options=options,
+                use_subprocess=True
+            )
+            logger.info("✅ 驱动启动成功（自动版本）")
+            self.driver.set_window_size(1280, 720)
+        except Exception as e:
+            logger.error(f"❌ 驱动启动完全失败: {e}")
+            raise
 
     def _handle_turnstile(self, context=""):
         """优化后的 Cloudflare 验证逻辑"""
