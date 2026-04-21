@@ -28,25 +28,20 @@ jobs:
           pip install -r requirements.txt
           sudo apt-get update && sudo apt-get install -y xvfb
           
-      - name: 🌐 Setup Chrome 146
-        uses: browser-actions/setup-chrome@v1
-        with:
-          chrome-version: 146
-          install-chromedriver: false
-          
-      - name: Get Chromium Version
-        id: get_version
+      - name: 🔄 Replace system Chrome with 146
         run: |
-          CHROME_VERSION=$(chromium-browser --version 2>/dev/null | grep -oE 'Chromium\s[0-9]+' | grep -oE '[0-9]+')
-          if [ -z "$CHROME_VERSION" ]; then
-            CHROME_VERSION=$(google-chrome --version 2>/dev/null | grep -oE 'Chrome\s[0-9]+' | grep -oE '[0-9]+')
-          fi
-          if [ -z "$CHROME_VERSION" ]; then
-            echo "⚠️ 无法自动检测浏览器版本，使用最新稳定版本。"
-          CHROME_VERSION="144"
-          fi
-          echo "Detected Chrome/Chromium Major Version: $CHROME_VERSION"
-          echo "CHROME_VERSION=$CHROME_VERSION" >> $GITHUB_ENV
+          set -e
+          sudo rm -rf /opt/google/chrome /usr/bin/google-chrome 2>/dev/null || true
+          CHROME_VERSION="146.0.7680.165"
+          wget -q "https://storage.googleapis.com/chrome-for-testing-public/${CHROME_VERSION}/linux64/chrome-linux64.zip" -O /tmp/chrome146.zip
+          sudo mkdir -p /opt/google/chrome
+          sudo unzip -q /tmp/chrome146.zip -d /tmp/chrome-extract
+          sudo mv /tmp/chrome-extract/chrome-linux64/* /opt/google/chrome/
+          sudo ln -sf /opt/google/chrome/chrome /usr/bin/google-chrome
+          sudo chmod +x /opt/google/chrome/chrome
+          rm -f /tmp/chrome146.zip /tmp/chrome-extract -rf
+          google-chrome --version
+          echo "CHROME_VERSION=146" >> $GITHUB_ENV
 
       - name: Start X Virtual Frame Buffer (Xvfb)
         # 在后台启动 Xvfb，创建一个虚拟屏幕 :99
