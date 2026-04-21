@@ -28,28 +28,14 @@ jobs:
           pip install -r requirements.txt
           sudo apt-get update && sudo apt-get install -y xvfb
           
-      - name: 🔄 Replace system Chrome with version 146
+      - name: Install Google Chrome
         run: |
-          echo "🔍 清理旧版本..."
-          sudo rm -rf /opt/google/chrome /usr/bin/google-chrome 2>/dev/null || true
-          echo "📦 下载 Chrome 146 for Testing..."
-          CHROME_VERSION="146.0.7680.165"
-          wget -q "https://storage.googleapis.com/chrome-for-testing-public/${CHROME_VERSION}/linux64/chrome-linux64.zip" -O /tmp/chrome146.zip
-          echo "📦 解压..."
-          sudo mkdir -p /opt/google/chrome
-          sudo unzip -q /tmp/chrome146.zip -d /tmp/chrome-extract
-          echo "📦 安装到系统路径..."
-          sudo mv /tmp/chrome-extract/chrome-linux64/* /opt/google/chrome/
-          echo "🔗 创建系统命令链接..."
-          sudo ln -sf /opt/google/chrome/chrome /usr/bin/google-chrome
-          sudo chmod +x /opt/google/chrome/chrome
-          echo "🧹 清理临时文件（使用 sudo）..."
-          # 🔹 修复：清理也用 sudo + 修正参数顺序
-          sudo rm -rf /tmp/chrome-extract
-          sudo rm -f /tmp/chrome146.zip
-          echo "✅ 验证安装..."
-          google-chrome --version
-          echo "CHROME_VERSION=146" >> $GITHUB_ENV
+          sudo apt-get update
+          sudo apt-get install -y wget gnupg
+          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+          echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+          sudo apt-get update
+          sudo apt-get install -y google-chrome-stable
 
       - name: Start X Virtual Frame Buffer (Xvfb)
         # 在后台启动 Xvfb，创建一个虚拟屏幕 :99
