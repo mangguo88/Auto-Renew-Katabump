@@ -13,8 +13,28 @@ jobs:
       ACCOUNTS: ${{ secrets.ACCOUNTS }}
       BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
       CHAT_ID: ${{ secrets.CHAT_ID }}
-
+      
     steps:
+      - name: Interval Check (Strict 4-day cycle)
+        id: check
+        run: |
+          # 如果是手动触发，则跳过检查直接运行
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "run=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # 计算当前 Unix 天数 (UTC)
+          DAYS=$(( $(date -u +%s) / 86400 ))
+          REMAINDER=$(( $DAYS % 4 ))
+          
+          if [ $REMAINDER -eq 0 ]; then
+            echo "Today is the scheduled day (2026-04-25). Starting workflow..."
+          else
+            echo "::error::Not the scheduled day. Stopping workflow."
+            exit 1
+          fi
+          
       - name: Checkout repository
         uses: actions/checkout@v4
 
