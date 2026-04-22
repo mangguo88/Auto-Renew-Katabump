@@ -6,14 +6,10 @@ on:
   workflow_dispatch:  # 允许手动触发
 
 jobs:
-  auto_renew_katabump:
-    runs-on: ubuntu-22.04
-
-    env:
-      ACCOUNTS: ${{ secrets.ACCOUNTS }}
-      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-      CHAT_ID: ${{ secrets.CHAT_ID }}
-      
+   pre-check:
+    runs-on: ubuntu-latest
+    outputs:
+      should_skip: ${{ steps.check.outputs.EARLY_EXIT }}  # 映射步骤输出到 Job 输出
     steps:
       - name: Interval Check (Strict 4-day cycle)
         id: check
@@ -29,12 +25,18 @@ jobs:
           REMAINDER=$(( $DAYS % 4 ))
           
           if [ $REMAINDER -eq 0 ]; then
-            echo "Today is the scheduled day (2026-04-25). Starting workflow..."
-          else
-            echo "::error::Not the scheduled day. Stopping workflow."
-            exit 1
+            echo "EARLY_EXIT=true" >> $GITHUB_OUTPUT
           fi
-          
+  auto_renew_katabump:
+    needs: pre-check
+    if: needs.pre-check.outputs.should_skip != 'true'
+    runs-on: ubuntu-22.04
+    env:
+      ACCOUNTS: ${{ secrets.ACCOUNTS }}
+      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+      CHAT_ID: ${{ secrets.CHAT_ID }}
+      
+    steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
