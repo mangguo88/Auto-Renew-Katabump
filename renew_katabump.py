@@ -152,11 +152,15 @@ class KatabumpAutoRenew:
             return False
     def _handle_turnstile2(self):
         checkbox_xpath = "//div[@class='altcha']//input[@type='checkbox' and @required]"
-        checkbox = WebDriverWait(self.driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, checkbox_xpath))
-        )
-        checkbox.click()
-        sleep(8000 + random.random() * 2000)
+        try:
+            checkbox = WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, checkbox_xpath))
+            )
+            logger.info(f"✅ 找到 Altcha 复选框: id={checkbox.get_attribute('id')}")
+            checkbox.click()
+            sleep(8000 + random.random() * 2000)
+        except TimeoutException:
+            logger.warning("⚠️ 10 秒内未找到 Altcha 复选框")
             
     def process(self):
         logger.info(f"🚀 开始登录账号: {self.masked_user}")
