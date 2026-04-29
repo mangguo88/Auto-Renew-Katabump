@@ -156,6 +156,7 @@ class KatabumpAutoRenew:
             EC.element_to_be_clickable((By.XPATH, checkbox_xpath))
         )
         checkbox.click()
+        sleep(8000 + random.random() * 2000)
             
     def process(self):
         logger.info(f"🚀 开始登录账号: {self.masked_user}")
