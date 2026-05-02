@@ -2,7 +2,7 @@ name: Auto Renew Katabump
 
 on:
   schedule:
-    - cron: '22 1 * * *'  # 每天运行（建议：你的注释说是03:17，但cron写的是01:22 UTC）
+    - cron: '22 1 * * *'  # 每天运行 (UTC 01:22)
   workflow_dispatch:      # 允许手动触发
 
 jobs:
@@ -14,27 +14,26 @@ jobs:
       - name: Interval Check
         id: check
         run: |
-          # 如果是手动触发 (workflow_dispatch)，则不跳过
+          # 如果是手动触发，则强制不跳过
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "Manual trigger: bypassing interval check."
+            echo "手动触发：跳过周期检查，强制运行。"
             echo "should_skip=false" >> $GITHUB_OUTPUT
           else
-            # 计算当前 Unix 天数 (UTC)
+            # 计算 Unix 天数 (UTC) 逻辑：每 4 天运行一次
             DAYS=$(( $(date -u +%s) / 86400 ))
             REMAINDER=$(( $DAYS % 4 ))
             
             if [ $REMAINDER -ne 0 ]; then
-              echo "Interval check failed: skipping today."
+              echo "周期检查：今天不是运行日，已跳过。"
               echo "should_skip=true" >> $GITHUB_OUTPUT
             else
-              echo "Interval check passed: running today."
+              echo "周期检查：已达到 4 天周期，准备运行。"
               echo "should_skip=false" >> $GITHUB_OUTPUT
             fi
           fi
 
   auto_renew_katabump:
     needs: pre-check
-    # 只有当 should_skip 不为 'true' 时才运行
     if: needs.pre-check.outputs.should_skip != 'true'
     runs-on: ubuntu-22.04
     env:
@@ -51,21 +50,32 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install Google Chrome and Dependencies
         run: |
-          pip install -r requirements.txt
-          # 合并安装命令，提高效率
+          # 更新系统并安装 Chrome 及其依赖
           sudo apt-get update
           sudo apt-get install -y xvfb libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
             libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libpango-1.0-0 \
             libcairo2 libasound2
+          
+          # 下载安装最新的 Chrome 稳定版
+          wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt install -y ./google-chrome-stable_current_amd64.deb
+          
+          # 安装 Python 依赖
+          pip install -r requirements.txt
 
       - name: Start X Virtual Frame Buffer (Xvfb)
-        run: Xvfb :99 -ac &
-            
+        run: |
+          # 清理可能残留的进程并启动虚拟屏幕
+          sudo killall Xvfb || true
+          Xvfb :99 -ac -screen 0 1280x1024x24 &
+          sleep 5 # 给虚拟屏幕一点启动时间
+
       - name: Run Script in Stealth Mode
         env:
           DISPLAY: ':99'
-          HEADLESS: 'false' # 因为使用了 Xvfb，这里设为 false 模拟有头模式以避开检测
+          HEADLESS: 'false'
         run: |
+          # 运行续期脚本
           python renew_katabump.py
