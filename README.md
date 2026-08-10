@@ -10,4 +10,4 @@
 - `BOT_TOKEN` - Telegram 机器人的 Token
 - `CHAT_ID` - 接收通知的 Telegram 聊天 ID
 
-Last workflow run: 2026-07-10 02:00:32 UTC
+Last workflow run: 2026-08-10 01:01:05 UTC
